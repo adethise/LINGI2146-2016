@@ -42,7 +42,7 @@ PROCESS_THREAD(sender_process, ev, data)
   file = cfs_open("message", CFS_WRITE | CFS_APPEND | CFS_READ);
   if(file < 0) {  printf("Error creating file"); }
   
-  while(i < MSGSIZE+1) {   
+  /*while(i < MSGSIZE+1) {   
     if(i == MSGSIZE) {
       r = cfs_write(file, "\0", sizeof(char));
       if(r != sizeof(char)) { printf("Error writing file"); }
@@ -52,7 +52,12 @@ PROCESS_THREAD(sender_process, ev, data)
       if(r != sizeof(char)) { printf("Error writing file"); }
     }
     i++;
-  }
+  }*/
+
+  r = cfs_write(file, "Hello", sizeof(char) * MSGSIZE);
+  if(r != sizeof(char) * MSGSIZE) { printf("Error writing file"); }
+  r = cfs_write(file, "\0", sizeof(char));
+  if(r != sizeof(char)) { printf("Error writing file"); }
 
   cfs_close(file);  
   
