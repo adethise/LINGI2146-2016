@@ -38,5 +38,10 @@
 
 # Ignore trash system files
 *~
-.DS_store
+.DS_Store
 desktop.ini
+
+# Ignore logs
+*.log
+*.LOG
+*.Log
