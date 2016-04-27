@@ -1,8 +1,13 @@
 # Object files
 *.o
+*.d
 *.ko
 *.obj
 *.elf
+
+# Contiki compiled objects
+*.z1
+*.native
 
 # Precompiled Headers
 *.gch
@@ -30,3 +35,8 @@
 
 # Debug files
 *.dSYM/
+
+# Ignore trash system files
+*~
+.DS_store
+desktop.ini
