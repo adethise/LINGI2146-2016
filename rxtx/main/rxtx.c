@@ -41,11 +41,17 @@
 #include "net/rime.h"
 #include "random.h"
 
+
 #include "dev/button-sensor.h"
 
 #include "dev/leds.h"
 
 #include <stdio.h>
+#include <string.h>
+
+
+static char *message = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aenean ultricies amet.";
+
 /*---------------------------------------------------------------------------*/
 PROCESS(example_broadcast_process, "Broadcast example");
 AUTOSTART_PROCESSES(&example_broadcast_process);
@@ -55,6 +61,8 @@ broadcast_recv(struct broadcast_conn *c, const rimeaddr_t *from)
 {
   printf("broadcast message received from %d.%d: '%s'\n",
          from->u8[0], from->u8[1], (char *)packetbuf_dataptr());
+  		 if(strcmp((char *)packetbuf_dataptr(),message)==0)
+         leds_toggle(LEDS_YELLOW);
 }
 static const struct broadcast_callbacks broadcast_call = {broadcast_recv};
 static struct broadcast_conn broadcast;
@@ -71,12 +79,11 @@ PROCESS_THREAD(example_broadcast_process, ev, data)
 
   while(1) {
 
-    /* Delay 2-4 seconds */
-    etimer_set(&et, CLOCK_SECOND * 4 + random_rand() % (CLOCK_SECOND * 4));
+    etimer_set(&et, CLOCK_SECOND + random_rand() % CLOCK_SECOND);
 
     PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
 
-    packetbuf_copyfrom("Hello", 6);
+    packetbuf_copyfrom(message, strlen(message)+1);
     broadcast_send(&broadcast);
     printf("broadcast message sent\n");
   }
