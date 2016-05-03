@@ -678,7 +678,9 @@ send_packet(mac_callback_t mac_callback, void *mac_callback_ptr,
      that we have a collision, which lets the packet be received. This
      packet will be retransmitted later by the MAC protocol
      instread. */
-  if(NETSTACK_RADIO.receiving_packet() || NETSTACK_RADIO.pending_packet()) {
+  /* For the purpose of jamming, we want to transmit in all cases */
+  //if(NETSTACK_RADIO.receiving_packet() || NETSTACK_RADIO.pending_packet()) {
+  if(1 == 0) {
     we_are_sending = 0;
     PRINTF("contikimac: collision receiving %d, pending %d\n",
            NETSTACK_RADIO.receiving_packet(), NETSTACK_RADIO.pending_packet());
@@ -706,7 +708,9 @@ send_packet(mac_callback_t mac_callback, void *mac_callback_ptr,
 #if !RDC_CONF_HARDWARE_CSMA
     /* Check if there are any transmissions by others. */
     /* TODO: why does this give collisions before sending with the mc1322x? */
-  if(is_receiver_awake == 0) {
+  /* For the purpose of jamming, we transmit anyway */
+  //if(is_receiver_awake == 0) {
+  if(1 == 0) {
     int i;
     for(i = 0; i < CCA_COUNT_MAX_TX; ++i) {
       t0 = RTIMER_NOW();
@@ -725,7 +729,9 @@ send_packet(mac_callback_t mac_callback, void *mac_callback_ptr,
     }
   }
 
-  if(collisions > 0) {
+  /* For the purpose of jamming, we ignore this line as well */
+  //if(collisions > 0) {
+  if(1 == 0) {
     we_are_sending = 0;
     off();
     PRINTF("contikimac: collisions before sending\n");
@@ -766,7 +772,9 @@ send_packet(mac_callback_t mac_callback, void *mac_callback_ptr,
       int ret;
 
       txtime = RTIMER_NOW();
-      ret = NETSTACK_RADIO.transmit(transmit_len);
+      /* For the purpose of jamming, let's try to loop on this line */
+      //ret = NETSTACK_RADIO.transmit(transmit_len);
+      for (;;) ret = NETSTACK_RADIO.transmit(transmit_len);
 
 #if RDC_CONF_HARDWARE_ACK
      /* For radios that block in the transmit routine and detect the
