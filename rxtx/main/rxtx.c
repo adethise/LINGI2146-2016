@@ -49,7 +49,7 @@
 #include <stdio.h>
 #include <string.h>
 
-static char* message = "Lorem ipsum dolor sit amet, \
+const static char* message = "Lorem ipsum dolor sit amet, \
 			consectetur adipiscing elit. Morbi vehicula id.";
 /*---------------------------------------------------------------------------*/
 PROCESS(example_broadcast_process, "Broadcast communicator");
@@ -60,7 +60,7 @@ broadcast_recv(struct broadcast_conn *c, const rimeaddr_t *from)
 {
   printf("broadcast message received from %d.%d: '%s'\n",
          from->u8[0], from->u8[1], (char *)packetbuf_dataptr());
-  		 if(strcmp((char *)packetbuf_dataptr(),message)==0)
+  if(strcmp((char *)packetbuf_dataptr(),message)==0)
          leds_toggle(LEDS_BLUE);
 }
 static const struct broadcast_callbacks broadcast_call = {broadcast_recv};
