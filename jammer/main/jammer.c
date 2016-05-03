@@ -46,8 +46,12 @@
 #include "dev/leds.h"
 
 #include <stdio.h>
+#include <string.h>
+
+const static char* message = "I have come to ruin your day !\
+			      All your base are belong to us !";
 /*---------------------------------------------------------------------------*/
-PROCESS(example_broadcast_process, "Broadcast example");
+PROCESS(example_broadcast_process, "Flooding jammer");
 AUTOSTART_PROCESSES(&example_broadcast_process);
 /*---------------------------------------------------------------------------*/
 static void
@@ -68,8 +72,9 @@ PROCESS_THREAD(example_broadcast_process, ev, data)
   PROCESS_BEGIN();
 
   broadcast_open(&broadcast, 129, &broadcast_call);
+  leds_on(LEDS_RED);
 
-  packetbuf_copyfrom("Hey, I just want to send something but I don't know yet what to send :S", 72);
+  packetbuf_copyfrom(message, strlen(message)+1);
   broadcast_send(&broadcast);
   printf("broadcast message sent\n"); 
 
