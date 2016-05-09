@@ -237,8 +237,11 @@ packet_sent(void *ptr, int status, int num_transmissions)
       sent = metadata->sent;
       cptr = metadata->cptr;
       num_tx = n->transmissions;
-      if(status == MAC_TX_COLLISION ||
-         status == MAC_TX_NOACK) {
+
+      /* For the purpose of jamming, we want to retransmit 
+         the packet anyway */
+      // if(status == MAC_TX_COLLISION || status == MAC_TX_NOACK) {
+      if(1==1) { 
 
         /* If the transmission was not performed because of a
            collision or noack, we must retransmit the packet. */
@@ -273,9 +276,14 @@ packet_sent(void *ptr, int status, int num_transmissions)
 
         /* Pick a time for next transmission, within the interval:
          * [time, time + 2^backoff_exponent * time[ */
-        time = time + (random_rand() % (backoff_transmissions * time));
 
-        if(n->transmissions < metadata->max_transmissions) {
+	/* For the purpose of jamming, we want te retransmit immediately */
+	// time + (random_rand() % (backoff_transmissions * time));
+        time = 0;
+
+	/* For the purpose of jamming, we want to retransmit indefinitely */
+	// if (n->transmissions < metadata->max_transmissions)
+        if(1==1) { 
           PRINTF("csma: retransmitting with time %lu %p\n", time, q);
           ctimer_set(&n->transmit_timer, time,
                      transmit_packet_list, n);
