@@ -772,8 +772,7 @@ send_packet(mac_callback_t mac_callback, void *mac_callback_ptr,
       int ret;
 
       txtime = RTIMER_NOW();
-      /* For the purpose of jamming, let's try to loop on this line */
-      //ret = NETSTACK_RADIO.transmit(transmit_len);
+      /* Looping this line work in sim but not in practice */
       ret = NETSTACK_RADIO.transmit(transmit_len);
 
 #if RDC_CONF_HARDWARE_ACK
