@@ -50,7 +50,7 @@
 #include <string.h>
 
 const static char* message = "Lorem ipsum dolor sit amet, \
-			consectetur adipiscing elit. Morbi vehicula id.";
+consectetur adipiscing elit. Morbi vehicula id.";
 /*---------------------------------------------------------------------------*/
 PROCESS(example_broadcast_process, "Broadcast communicator");
 AUTOSTART_PROCESSES(&example_broadcast_process);

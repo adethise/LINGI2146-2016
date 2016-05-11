@@ -48,18 +48,13 @@
 #include <stdio.h>
 #include <string.h>
 
-const static char* message = "I have come to ruin your day !\
-			      All your base are belong to us !";
+const static char* message = "I have come to ruin your day ! All your base are belong to us ! Hahaha !";
 /*---------------------------------------------------------------------------*/
-PROCESS(example_broadcast_process, "Flooding jammer");
+PROCESS(example_broadcast_process, "Reactive jammer");
 AUTOSTART_PROCESSES(&example_broadcast_process);
 /*---------------------------------------------------------------------------*/
 static void
-broadcast_recv(struct broadcast_conn *c, const rimeaddr_t *from)
-{
-  printf("broadcast message received from %d.%d: '%s'\n",
-         from->u8[0], from->u8[1], (char *)packetbuf_dataptr());
-}
+broadcast_recv(struct broadcast_conn *c, const rimeaddr_t *from) {}
 static const struct broadcast_callbacks broadcast_call = {broadcast_recv};
 static struct broadcast_conn broadcast;
 /*---------------------------------------------------------------------------*/

@@ -639,12 +639,8 @@ send_packet(mac_callback_t mac_callback, void *mac_callback_ptr,
     transmit_len = SHORTEST_PACKET_SIZE;
   }
 
-
   packetbuf_compact();
 
-#ifdef NETSTACK_ENCRYPT
-  NETSTACK_ENCRYPT();
-#endif /* NETSTACK_ENCRYPT */
 
   transmit_len = packetbuf_totlen();
 
@@ -652,224 +648,30 @@ send_packet(mac_callback_t mac_callback, void *mac_callback_ptr,
 
   /* Remove the MAC-layer header since it will be recreated next time around. */
   packetbuf_hdr_remove(hdrlen);
-
-  if(!is_broadcast && !is_receiver_awake) {
-#if WITH_PHASE_OPTIMIZATION
-    ret = phase_wait(packetbuf_addr(PACKETBUF_ADDR_RECEIVER),
-                     CYCLE_TIME, GUARD_TIME,
-                     mac_callback, mac_callback_ptr, buf_list);
-    if(ret == PHASE_DEFERRED) {
-      return MAC_TX_DEFERRED;
-    }
-    if(ret != PHASE_UNKNOWN) {
-      is_known_receiver = 1;
-    }
-#endif /* WITH_PHASE_OPTIMIZATION */ 
-  }
   
 
 
   /* By setting we_are_sending to one, we ensure that the rtimer
      powercycle interrupt do not interfere with us sending the packet. */
+  we_are_sending = 0;
+  // now let's look at the channel 
+  on();
+  while(NETSTACK_RADIO.channel_clear()==1){}
+
+  // now we know that someone is transmitting
   we_are_sending = 1;
 
-  /* If we have a pending packet in the radio, we should not send now,
-     because we will trash the received packet. Instead, we signal
-     that we have a collision, which lets the packet be received. This
-     packet will be retransmitted later by the MAC protocol
-     instread. */
-  /* For the purpose of jamming, we want to transmit in all cases */
-  //if(NETSTACK_RADIO.receiving_packet() || NETSTACK_RADIO.pending_packet()) {
-  if(1 == 0) {
-    we_are_sending = 0;
-    PRINTF("contikimac: collision receiving %d, pending %d\n",
-           NETSTACK_RADIO.receiving_packet(), NETSTACK_RADIO.pending_packet());
-    return MAC_TX_COLLISION;
-  }
-  
   /* Switch off the radio to ensure that we didn't start sending while
      the radio was doing a channel check. */
   off();
 
-
-  strobes = 0;
-
-  /* Send a train of strobes until the receiver answers with an ACK. */
-  collisions = 0;
-
-  got_strobe_ack = 0;
-
-  /* Set contikimac_is_on to one to allow the on() and off() functions
-     to control the radio. We restore the old value of
-     contikimac_is_on when we are done. */
-  contikimac_was_on = contikimac_is_on;
-  contikimac_is_on = 1;
-
-#if !RDC_CONF_HARDWARE_CSMA
-    /* Check if there are any transmissions by others. */
-    /* TODO: why does this give collisions before sending with the mc1322x? */
-  /* For the purpose of jamming, we transmit anyway */
-  if(is_receiver_awake == 0) {
-  //if(1 == 0) {
-    int i;
-    on();
-    for(i = 0; /*i < CCA_COUNT_MAX_TX*/; ++i) {
-      //t0 = RTIMER_NOW();
-      //on();
-#if CCA_CHECK_TIME > 0
-      //while(RTIMER_CLOCK_LT(RTIMER_NOW(), t0 + CCA_CHECK_TIME)) { }
-#endif
-      if(NETSTACK_RADIO.channel_clear() == 0) {
-        //collisions++;
-        off();
-        break;
-      }
-      //off();
-      //t0 = RTIMER_NOW();
-      //while(RTIMER_CLOCK_LT(RTIMER_NOW(), t0 + CCA_SLEEP_TIME)) { }
-    }
+  // jamming !!!
+  int i = 0;
+  for(i=0;i<50;i++){
+    NETSTACK_RADIO.transmit(transmit_len);  
   }
-
-  /* For the purpose of jamming, we ignore this line as well */
-  //if(collisions > 0) {
-  if(1 == 0) {
-    we_are_sending = 0;
-    off();
-    PRINTF("contikimac: collisions before sending\n");
-    contikimac_is_on = contikimac_was_on;
-    return MAC_TX_COLLISION;
-  }
-#endif /* RDC_CONF_HARDWARE_CSMA */
-
-#if !RDC_CONF_HARDWARE_ACK
-  if(!is_broadcast) {
-    /* Turn radio on to receive expected unicast ack.  Not necessary
-       with hardware ack detection, and may trigger an unnecessary cca
-       or rx cycle */
-     on();
-  }
-#endif
-
-  watchdog_periodic();
-  t0 = RTIMER_NOW();
-  seqno = packetbuf_attr(PACKETBUF_ATTR_MAC_SEQNO);
-  for(strobes = 0, collisions = 0;
-      got_strobe_ack == 0 && collisions == 0 &&
-      RTIMER_CLOCK_LT(RTIMER_NOW(), t0 + STROBE_TIME); strobes++) {
-
-    watchdog_periodic();
-
-    if(!is_broadcast && (is_receiver_awake || is_known_receiver) &&
-       !RTIMER_CLOCK_LT(RTIMER_NOW(), t0 + MAX_PHASE_STROBE_TIME)) {
-      PRINTF("miss to %d\n", packetbuf_addr(PACKETBUF_ADDR_RECEIVER)->u8[0]);
-      break;
-    }
-
-    len = 0;
-
-    {
-      rtimer_clock_t wt;
-      rtimer_clock_t txtime;
-      int ret;
-
-      txtime = RTIMER_NOW();
-      /* Looping this line work in sim but not in practice */
-      ret = NETSTACK_RADIO.transmit(transmit_len);
-
-#if RDC_CONF_HARDWARE_ACK
-     /* For radios that block in the transmit routine and detect the
-	ACK in hardware */
-      if(ret == RADIO_TX_OK) {
-        if(!is_broadcast) {
-          got_strobe_ack = 1;
-          encounter_time = txtime;
-          break;
-        }
-      } else if (ret == RADIO_TX_NOACK) {
-      } else if (ret == RADIO_TX_COLLISION) {
-          PRINTF("contikimac: collisions while sending\n");
-          collisions++;
-      }
-      wt = RTIMER_NOW();
-      while(RTIMER_CLOCK_LT(RTIMER_NOW(), wt + INTER_PACKET_INTERVAL)) { }
-#else /* RDC_CONF_HARDWARE_ACK */
-     /* Wait for the ACK packet */
-      wt = RTIMER_NOW();
-      while(RTIMER_CLOCK_LT(RTIMER_NOW(), wt + INTER_PACKET_INTERVAL)) { }
-
-      if(!is_broadcast && (NETSTACK_RADIO.receiving_packet() ||
-                           NETSTACK_RADIO.pending_packet() ||
-                           NETSTACK_RADIO.channel_clear() == 0)) {
-        uint8_t ackbuf[ACK_LEN];
-        wt = RTIMER_NOW();
-        while(RTIMER_CLOCK_LT(RTIMER_NOW(), wt + AFTER_ACK_DETECTECT_WAIT_TIME)) { }
-
-        len = NETSTACK_RADIO.read(ackbuf, ACK_LEN);
-        if(len == ACK_LEN && seqno == ackbuf[ACK_LEN - 1]) {
-          got_strobe_ack = 1;
-          encounter_time = txtime;
-          break;
-        } else {
-          PRINTF("contikimac: collisions while sending\n");
-          collisions++;
-        }
-      }
-#endif /* RDC_CONF_HARDWARE_ACK */
-    }
-  }
-
-  off();
-
-  PRINTF("contikimac: send (strobes=%u, len=%u, %s, %s), done\n", strobes,
-         packetbuf_totlen(),
-         got_strobe_ack ? "ack" : "no ack",
-         collisions ? "collision" : "no collision");
-
-#if CONTIKIMAC_CONF_COMPOWER
-  /* Accumulate the power consumption for the packet transmission. */
-  compower_accumulate(&current_packet);
-
-  /* Convert the accumulated power consumption for the transmitted
-     packet to packet attributes so that the higher levels can keep
-     track of the amount of energy spent on transmitting the
-     packet. */
-  compower_attrconv(&current_packet);
-
-  /* Clear the accumulated power consumption so that it is ready for
-     the next packet. */
-  compower_clear(&current_packet);
-#endif /* CONTIKIMAC_CONF_COMPOWER */
-
-  contikimac_is_on = contikimac_was_on;
-  we_are_sending = 0;
-
-  /* Determine the return value that we will return from the
-     function. We must pass this value to the phase module before we
-     return from the function.  */
-  if(collisions > 0) {
-    ret = MAC_TX_COLLISION;
-  } else if(!is_broadcast && !got_strobe_ack) {
-    ret = MAC_TX_NOACK;
-  } else {
-    ret = MAC_TX_OK;
-  }
-
-#if WITH_PHASE_OPTIMIZATION
-  if(is_known_receiver && got_strobe_ack) {
-    PRINTF("no miss %d wake-ups %d\n",
-	   packetbuf_addr(PACKETBUF_ADDR_RECEIVER)->u8[0],
-           strobes);
-  }
-
-  if(!is_broadcast) {
-    if(collisions == 0 && is_receiver_awake == 0) {
-      phase_update(packetbuf_addr(PACKETBUF_ADDR_RECEIVER),
-		   encounter_time, ret);
-    }
-  }
-#endif /* WITH_PHASE_OPTIMIZATION */
-
-  return ret;
+  // use the call back of the modified CSMA ;)
+  return MAC_TX_COLLISION;
 }
 /*---------------------------------------------------------------------------*/
 static void
