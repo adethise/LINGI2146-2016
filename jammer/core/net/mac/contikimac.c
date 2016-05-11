@@ -709,24 +709,23 @@ send_packet(mac_callback_t mac_callback, void *mac_callback_ptr,
     /* Check if there are any transmissions by others. */
     /* TODO: why does this give collisions before sending with the mc1322x? */
   /* For the purpose of jamming, we transmit anyway */
-  if(is_receiver_awake == 0) {
-  //if(1 == 0) {
+  //if(is_receiver_awake == 0) {
+  if(1 == 0) {
     int i;
-    on();
-    for(i = 0; /*i < CCA_COUNT_MAX_TX*/; ++i) {
-      //t0 = RTIMER_NOW();
-      //on();
+    for(i = 0; i < CCA_COUNT_MAX_TX; ++i) {
+      t0 = RTIMER_NOW();
+      on();
 #if CCA_CHECK_TIME > 0
-      //while(RTIMER_CLOCK_LT(RTIMER_NOW(), t0 + CCA_CHECK_TIME)) { }
+      while(RTIMER_CLOCK_LT(RTIMER_NOW(), t0 + CCA_CHECK_TIME)) { }
 #endif
       if(NETSTACK_RADIO.channel_clear() == 0) {
-        //collisions++;
+        collisions++;
         off();
         break;
       }
-      //off();
-      //t0 = RTIMER_NOW();
-      //while(RTIMER_CLOCK_LT(RTIMER_NOW(), t0 + CCA_SLEEP_TIME)) { }
+      off();
+      t0 = RTIMER_NOW();
+      while(RTIMER_CLOCK_LT(RTIMER_NOW(), t0 + CCA_SLEEP_TIME)) { }
     }
   }
 
